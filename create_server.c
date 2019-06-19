@@ -36,5 +36,4 @@ void *create_server(void *uncasted_data_pointer) {
       pthread_create(&thread_id, NULL, data->handle, &new_socket);
     }
   }
-  return NULL;
 }
