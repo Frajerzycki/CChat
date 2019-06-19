@@ -1,11 +1,11 @@
-#include "headers/creating_sockets.h"
-#include "headers/errors.h"
-#include "headers/connection.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "headers/create_client.h"
+#include "headers/errors.h"
+
 #define CLIENT_ARGUMENTS_TEMPLATE "<IP:PORT>"
 void parse_arguments(char *argv[], char **ip, int *port) {
   unsigned int i, first_argument_length = strlen(argv[1]);
@@ -20,19 +20,16 @@ void parse_arguments(char *argv[], char **ip, int *port) {
 
 void handle_connection(int socket) {
   char message[200];
-  printf("Enter message ->\t");
   fgets(message, 199, stdin);
-  printf(message);
   send(socket, message, strlen(message), 0);
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 2)
     usage(argv[0], CLIENT_ARGUMENTS_TEMPLATE);
-  Connection *connection = malloc(sizeof(Connection));
-  connection->repeat = 1;
-  connection->handle = handle_connection;
-  parse_arguments(argv, &connection->ip, &connection->port);
-  create_client(connection);
+  ClientData *data = malloc(sizeof(ClientData));
+  data->handle = handle_connection;
+  parse_arguments(argv, &data->ip, &data->port);
+  create_client(data);
   return 0;
 }
