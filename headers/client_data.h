@@ -3,5 +3,6 @@
 typedef struct {
     char* ip;
     int port;
-    void (*handle)(int);
+    void (*send_message)(int);
+    void* (*receive_messages)(void*);
 } ClientData;

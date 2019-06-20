@@ -22,8 +22,7 @@ void create_client(ClientData *data) {
 
   if (connect(new_socket, (struct sockaddr*)&serv_addr,
               sizeof(serv_addr)) < 0)
-    show_error_message_and_exit();
-  
+    show_error_message_and_exit();  
   while (1)
-    data->handle(new_socket);
+    data->send_message(new_socket);
 }

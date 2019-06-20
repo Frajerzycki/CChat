@@ -18,7 +18,7 @@ void parse_arguments(char *argv[], char **ip, int *port) {
   *port = atoi(*ip + i + 1);
 }
 
-void handle_connection(int socket) {
+void send_message(int socket) {
   char message[200];
   fgets(message, 199, stdin);
   send(socket, message, strlen(message), 0);
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   if (argc < 2)
     usage(argv[0], CLIENT_ARGUMENTS_TEMPLATE);
   ClientData *data = malloc(sizeof(ClientData));
-  data->handle = handle_connection;
+  data->send_message = send_message;
   parse_arguments(argv, &data->ip, &data->port);
   create_client(data);
   return 0;
