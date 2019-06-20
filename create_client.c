@@ -23,6 +23,8 @@ void create_client(ClientData *data) {
   if (connect(new_socket, (struct sockaddr*)&serv_addr,
               sizeof(serv_addr)) < 0)
     show_error_message_and_exit();  
+  pthread_t thread_id;
+  pthread_create(&thread_id, NULL, data->receive_messages, &new_socket);
   while (1)
     data->send_message(new_socket);
 }
