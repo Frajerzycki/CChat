@@ -1,6 +1,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <string.h>
 #include "headers/client_data.h"
