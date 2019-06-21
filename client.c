@@ -26,12 +26,13 @@ void send_message(int socket) {
 }
 
 void* receive_messages(void* socket_pointer) {
+    char buffer[BUFFER_SIZE+1];
     int socket = *((int*)socket_pointer), valread;
     while (1) {
-        valread = read(socket, buffer, BUFFER_SIZE - 1);
+        valread = read(socket, buffer, BUFFER_SIZE);
         if (valread > 0) {
           buffer[valread] = 0;
-          printf(buffer);
+          printf("%s",buffer);
         } else {
           printf("Disconnected!\n");
           exit(0); 
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]) {
     usage(argv[0], CLIENT_ARGUMENTS_TEMPLATE);
   ClientData *data = malloc(sizeof(ClientData));
   data->send_message = send_message;
-  data->receive_messages = receive_messages:
+  data->receive_messages = receive_messages;
   parse_arguments(argv, &data->ip, &data->port);
   create_client(data);
   return 0;
