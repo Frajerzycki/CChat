@@ -3,8 +3,10 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "headers/create_client.h"
-#include "headers/create_server.h"
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+#include <sys/socket.h>
 #include "headers/errors.h"
 #define BUFFER_SIZE 256
 #define CLIENT_ARGUMENTS_TEMPLATE "<IP:PORT>"
@@ -19,10 +21,12 @@ void parse_arguments(char *argv[], char **ip, int *port) {
   *port = atoi(*ip + i + 1);
 }
 
-void send_message(int socket) {
-  char message[200];
-  fgets(message, 199, stdin);
-  send(socket, message, strlen(message), 0);
+void send_messages(int socket) {
+  char message[BUFFER_SIZE+1];
+  while (1) {
+    fgets(message, BUFFER_SIZE, stdin);
+    send(socket, message, strlen(message), 0);
+  }
 }
 
 void* receive_messages(void* socket_pointer) {
@@ -43,10 +47,25 @@ void* receive_messages(void* socket_pointer) {
 int main(int argc, char *argv[]) {
   if (argc < 2)
     usage(argv[0], CLIENT_ARGUMENTS_TEMPLATE);
-  ClientData *data = malloc(sizeof(ClientData));
-  data->send_message = send_message;
-  data->receive_messages = receive_messages;
-  parse_arguments(argv, &data->ip, &data->port);
-  create_client(data);
+  int port, new_socket;
+  char* ip;
+  struct sockaddr_in serv_addr;
+  parse_arguments(argv,&ip,&port);
+  if ((new_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    show_error_message_and_exit();
+
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(port);
+
+  // Convert ipv4 and IPv6 addresses from text to binary form
+  if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
+    show_error_message_and_exit();
+
+  if (connect(new_socket, (struct sockaddr*)&serv_addr,
+              sizeof(serv_addr)) < 0)
+    show_error_message_and_exit();  
+  pthread_t thread_id;
+  pthread_create(&thread_id, NULL, receive_messages,(void*) &new_socket);
+  send_messages(new_socket);
   return 0;
 }
