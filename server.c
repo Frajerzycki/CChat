@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h> //close
 #define BUFFER_SIZE 256
-#define SERVER_ARGUMENTS_TEMPLATE "<port>"
+#define SERVER_ARGUMENTS_TEMPLATE "<PORT>"
 
 int main(int argc, char *argv[]) {
   unsigned int i, max_clients = 100;
