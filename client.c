@@ -1,13 +1,12 @@
+#include "headers/errors.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <sys/socket.h>
-#include "headers/errors.h"
 #define BUFFER_SIZE 256
 #define CLIENT_ARGUMENTS_TEMPLATE "<IP:PORT>"
 void parse_arguments(char *argv[], char **ip, int *port) {
@@ -22,33 +21,33 @@ void parse_arguments(char *argv[], char **ip, int *port) {
 }
 
 void send_messages(int socket) {
-  char message[BUFFER_SIZE+1];
+  char message[BUFFER_SIZE + 1];
   while (1) {
     fgets(message, BUFFER_SIZE, stdin);
     send(socket, message, strlen(message), 0);
   }
 }
 
-void* receive_messages(void* socket_pointer) {
-    char buffer[BUFFER_SIZE+1];
-    int socket = *((int*)socket_pointer), valread;
-    while (1) {
-        valread = read(socket, buffer, BUFFER_SIZE);
-        if (valread > 0) {
-          buffer[valread] = 0;
-          printf("%s",buffer);
-        } else
-          show_error_message_and_exit("Disconnected!");
-    }
+void *receive_messages(void *socket_pointer) {
+  char buffer[BUFFER_SIZE + 1];
+  int socket = *((int *)socket_pointer), valread;
+  while (1) {
+    valread = read(socket, buffer, BUFFER_SIZE);
+    if (valread > 0) {
+      buffer[valread] = 0;
+      printf("%s", buffer);
+    } else
+      show_error_message_and_exit("Disconnected!");
+  }
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 2)
     usage(argv[0], CLIENT_ARGUMENTS_TEMPLATE);
   int port, new_socket;
-  char* ip;
+  char *ip;
   struct sockaddr_in serv_addr;
-  parse_arguments(argv,&ip,&port);
+  parse_arguments(argv, &ip, &port);
   if ((new_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     show_errno_and_exit();
 
@@ -59,11 +58,10 @@ int main(int argc, char *argv[]) {
   if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
     show_errno_and_exit();
 
-  if (connect(new_socket, (struct sockaddr*)&serv_addr,
-              sizeof(serv_addr)) < 0)
-    show_errno_and_exit();  
+  if (connect(new_socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    show_errno_and_exit();
   pthread_t thread_id;
-  pthread_create(&thread_id, NULL, receive_messages,(void*) &new_socket);
+  pthread_create(&thread_id, NULL, receive_messages, (void *)&new_socket);
   send_messages(new_socket);
   return 0;
 }

@@ -1,6 +1,10 @@
+#include "headers/errors.h"
+#include "headers/user.h"
 #include <arpa/inet.h> //close
 #include <errno.h>
 #include <netinet/in.h>
+#include <openssl/engine.h>
+#include <openssl/rsa.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strlen
@@ -8,13 +12,9 @@
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
 #include <sys/types.h>
 #include <unistd.h> //close
-#include <openssl/rsa.h>
-#include <openssl/engine.h>
-#include "headers/user.h"
-#include "headers/errors.h"
 #define BUFFER_SIZE 256
 #define SERVER_ARGUMENTS_TEMPLATE "<PORT> <MAX CLIENTS>"
-RSA* keypair;
+RSA *keypair;
 int max_clients;
 void initialize_clients(user *clients[]) {
   for (unsigned int i = 0; i < max_clients; i++) {
@@ -24,17 +24,26 @@ void initialize_clients(user *clients[]) {
   }
 }
 
+void send_message_to_all_users(char message[], user *clients[],
+                               int number_of_sender) {
+  for (unsigned int i = 0; i < max_clients; i++) {
+    int sdi = clients[i]->sd;
+    if (sdi > 0 && number_of_sender != i)
+      send(sdi, message, strlen(message), 0);
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc < 3)
     usage(argv[0], SERVER_ARGUMENTS_TEMPLATE);
-
   int port = atoi(argv[1]);
   if (port < 1 || port > 65535)
     show_error_message_and_exit("Port have to be in bounds <1,65535>.");
   max_clients = atoi(argv[2]);
   if (max_clients < 1)
-    show_error_message_and_exit("Number of maximum clients should be greater than 0.");
-  user* clients[max_clients]; 
+    show_error_message_and_exit(
+        "Number of maximum clients should be greater than 0.");
+  user *clients[max_clients];
 
   initialize_clients(clients);
 
@@ -56,11 +65,11 @@ int main(int argc, char *argv[]) {
   address.sin_port = htons(port);
 
   // bind the socket to localhost port 8888
-  if (bind(master_socket, (struct sockaddr *)&address, sizeof(address)) < 0) 
+  if (bind(master_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
     show_errno_and_exit();
 
   // try to specify maximum of 3 pending connections for the master socket
-  if (listen(master_socket, 3) < 0) 
+  if (listen(master_socket, 3) < 0)
     show_errno_and_exit();
   // accept the incoming connection
   size_t addrlen = sizeof(address);
@@ -93,26 +102,26 @@ int main(int argc, char *argv[]) {
     int activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
 
     if (activity < 0 && errno != EINTR)
-      printf("select error");
-    
+      printf("Error while select function.\n");
 
     // If something happened on the master socket ,
     // then its an incoming connection
     if (FD_ISSET(master_socket, &readfds)) {
       int new_socket;
       if ((new_socket = accept(master_socket, (struct sockaddr *)&address,
-                               (socklen_t *)&addrlen)) < 0) 
+                               (socklen_t *)&addrlen)) < 0)
         show_errno_and_exit();
 
       // inform user of socket number - used in send and receive commands
-      printf("New connection from %s:%d\n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+      printf("New connection from %s:%d\n", inet_ntoa(address.sin_addr),
+             ntohs(address.sin_port));
 
-      for (unsigned int i = 0; i < max_clients; i++)   
-        //if position is empty  
-        if(clients[i]->sd == 0) {   
-            clients[i]->sd = new_socket;   
-            break;   
-        }   
+      for (unsigned int i = 0; i < max_clients; i++)
+        // if position is empty
+        if (clients[i]->sd == 0) {
+          clients[i]->sd = new_socket;
+          break;
+        }
     }
 
     // else its some IO operation on some other socket
@@ -123,23 +132,19 @@ int main(int argc, char *argv[]) {
         // Check if it was for closing , and also read the
         // incoming message
         char buffer[BUFFER_SIZE];
-        ssize_t valread; 
-        if ((valread = read(sdi, buffer, BUFFER_SIZE-1)) == 0) {
+        ssize_t valread;
+        if ((valread = read(sdi, buffer, BUFFER_SIZE - 1)) == 0) {
           // Somebody disconnected , get his details and print
           getpeername(sdi, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-          printf("Host disconnected %s:%d\n",
-                 inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+          printf("Host disconnected %s:%d\n", inet_ntoa(address.sin_addr),
+                 ntohs(address.sin_port));
 
           // Close the socket and mark as 0 in list for reuse
           close(sdi);
           clients[i]->sd = 0;
         } else {
           buffer[valread] = 0;
-          for (unsigned int j = 0; j < max_clients; j++) {
-            int sdj = clients[j]->sd;
-            if (sdj > 0 && i != j)
-              send(sdj, buffer, strlen(buffer), 0);
-          }
+          send_message_to_all_users(buffer, clients, i);
         }
       }
     }
