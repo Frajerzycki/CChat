@@ -1,4 +1,5 @@
 #include "headers/errors.h"
+#include "headers/sizes.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -7,7 +8,6 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define BUFFER_SIZE 256
 #define CLIENT_ARGUMENTS_TEMPLATE "<IP:PORT>"
 void parse_arguments(char *argv[], char **ip, int *port) {
   unsigned int i, first_argument_length = strlen(argv[1]);

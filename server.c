@@ -1,11 +1,8 @@
 #include "headers/errors.h"
 #include "headers/connection.h"
+#include "headers/sizes.h"
 #include <arpa/inet.h> //close
 #include <errno.h>
-#include <openssl/rsa.h>
-#include <openssl/ec.h>
-#include <openssl/evp.h>
-#include <openssl/bn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strlen
@@ -13,14 +10,12 @@
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
 #include <sys/types.h>
 #include <unistd.h> //close
-#define BUFFER_SIZE 256
 #define SERVER_ARGUMENTS_TEMPLATE "<PORT> <MAX CLIENTS>"
 int max_clients;
 void initialize_clients(connection *clients[]) {
   for (unsigned int i = 0; i < max_clients; i++) {
     clients[i] = malloc(sizeof(connection));
     clients[i]->sd = 0;
-    clients[i]->public_key = NULL;
   }
 }
 
@@ -49,7 +44,6 @@ int main(int argc, char *argv[]) {
 
   initialize_clients(clients);
   // create a master socket
-  EVP_PKEY_new();
   int master_socket;
   if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     show_errno_and_exit();

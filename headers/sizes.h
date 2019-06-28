@@ -1,0 +1,2 @@
+#define KEY_SIZE_BITS 2048
+#define BUFFER_SIZE 256 
