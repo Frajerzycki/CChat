@@ -1,10 +1,11 @@
 #include "headers/errors.h"
-#include "headers/user.h"
+#include "headers/connection.h"
 #include <arpa/inet.h> //close
 #include <errno.h>
-#include <netinet/in.h>
-#include <openssl/engine.h>
 #include <openssl/rsa.h>
+#include <openssl/ec.h>
+#include <openssl/evp.h>
+#include <openssl/bn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strlen
@@ -14,17 +15,16 @@
 #include <unistd.h> //close
 #define BUFFER_SIZE 256
 #define SERVER_ARGUMENTS_TEMPLATE "<PORT> <MAX CLIENTS>"
-RSA *keypair;
 int max_clients;
-void initialize_clients(user *clients[]) {
+void initialize_clients(connection *clients[]) {
   for (unsigned int i = 0; i < max_clients; i++) {
-    clients[i] = malloc(sizeof(user));
+    clients[i] = malloc(sizeof(connection));
     clients[i]->sd = 0;
     clients[i]->public_key = NULL;
   }
 }
 
-void send_message_to_all_users(char message[], user *clients[],
+void send_message_to_all_clients(char message[], connection *clients[],
                                int number_of_sender) {
   for (unsigned int i = 0; i < max_clients; i++) {
     int sdi = clients[i]->sd;
@@ -32,6 +32,8 @@ void send_message_to_all_users(char message[], user *clients[],
       send(sdi, message, strlen(message), 0);
   }
 }
+
+
 
 int main(int argc, char *argv[]) {
   if (argc < 3)
@@ -43,11 +45,11 @@ int main(int argc, char *argv[]) {
   if (max_clients < 1)
     show_error_message_and_exit(
         "Number of maximum clients should be greater than 0.");
-  user *clients[max_clients];
+  connection *clients[max_clients];
 
   initialize_clients(clients);
-
   // create a master socket
+  EVP_PKEY_new();
   int master_socket;
   if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     show_errno_and_exit();
@@ -112,16 +114,17 @@ int main(int argc, char *argv[]) {
                                (socklen_t *)&addrlen)) < 0)
         show_errno_and_exit();
 
-      // inform user of socket number - used in send and receive commands
+      // inform connection of socket number - used in send and receive commands
       printf("New connection from %s:%d\n", inet_ntoa(address.sin_addr),
              ntohs(address.sin_port));
-
-      for (unsigned int i = 0; i < max_clients; i++)
+      unsigned int i = 0;
+      while (i < max_clients && clients[i]->sd != 0)
+        i++;
         // if position is empty
-        if (clients[i]->sd == 0) {
-          clients[i]->sd = new_socket;
-          break;
-        }
+      if (i < max_clients)
+        clients[i]->sd = new_socket;
+      else
+        close(new_socket);
     }
 
     // else its some IO operation on some other socket
@@ -144,7 +147,7 @@ int main(int argc, char *argv[]) {
           clients[i]->sd = 0;
         } else {
           buffer[valread] = 0;
-          send_message_to_all_users(buffer, clients, i);
+          send_message_to_all_clients(buffer, clients, i);
         }
       }
     }
