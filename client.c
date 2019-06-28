@@ -37,10 +37,8 @@ void* receive_messages(void* socket_pointer) {
         if (valread > 0) {
           buffer[valread] = 0;
           printf("%s",buffer);
-        } else {
-          printf("Disconnected!\n");
-          exit(0); 
-        }
+        } else
+          show_error_message_and_exit("Disconnected!");
     }
 }
 
@@ -52,18 +50,18 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in serv_addr;
   parse_arguments(argv,&ip,&port);
   if ((new_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    show_error_message_and_exit();
+    show_errno_and_exit();
 
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
 
   // Convert ipv4 and IPv6 addresses from text to binary form
   if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0)
-    show_error_message_and_exit();
+    show_errno_and_exit();
 
   if (connect(new_socket, (struct sockaddr*)&serv_addr,
               sizeof(serv_addr)) < 0)
-    show_error_message_and_exit();  
+    show_errno_and_exit();  
   pthread_t thread_id;
   pthread_create(&thread_id, NULL, receive_messages,(void*) &new_socket);
   send_messages(new_socket);
